@@ -1,0 +1,361 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "spectrumScaleClusterName": {
+            "type": "string",
+            "metadata": {
+                "description": "Spectrum Scale Cluster name."
+            }
+        },
+        "spectrumScaleNodeNamePrefix": {
+            "type": "string",
+            "defaultValue": "SCNode-",
+            "minLength": 1,
+            "maxLength": 12,
+            "metadata": {
+                "description": "The name prefix of the Spectrum Scale nodes. It must be no more than 12 characters, begin with a letter, and contain only letters, numbers and hyphens. For example, if 'SCNode-' is specified, the compute node names will be 'SCNode-0', 'SCNode-1', ..."
+            }
+        },
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "Admin username for all VM's."
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Admin password for all VM's."
+            }
+        },
+        "numberOfSpectrumScaleNodes": {
+            "type": "int",
+            "defaultValue": 2,
+            "minValue": 2,
+            "maxValue": 4,
+            "metadata": {
+                "description": "Number of VMs to deploy, limit 4 since this sample is using a single storage account"
+            }
+        },
+        "ImageStorageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Storage account name."
+            }
+        },
+        "ImageStorageAccountResourceGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "Resource group of the storage account"
+            }
+        },
+        "osDiskVhdUri": {
+            "type": "string",
+            "metadata": {
+                "description": "Uri of custom image"
+            }
+        },
+        "spectrumScaleFilesystemName": {
+            "type": "string",
+            "metadata": {
+                "description": "Spectrum Scale Filesystem Name"
+            }
+        },
+        "spectrumScaleVmSize": {
+            "type": "string",
+            "defaultValue": "Standard_D1_v2",
+            "metadata": {
+                "description": "Size of Spectrum Scale VM."
+            },
+            "allowedValues": [
+                "Standard_D2",
+                "Standard_D3",
+                "Standard_D4",
+                "Standard_D11",
+                "Standard_D12",
+                "Standard_D13",
+                "Standard_D14",
+                "Standard_D2_v2",
+                "Standard_D3_v2",
+                "Standard_D4_v2",
+                "Standard_D5_v2",
+                "Standard_D11_v2",
+                "Standard_D12_v2",
+                "Standard_D13_v2",
+                "Standard_D14_v2",
+                "Standard_D15_v2",
+                "Standard_DS2",
+                "Standard_DS3",
+                "Standard_DS4",
+                "Standard_DS11",
+                "Standard_DS12",
+                "Standard_DS13",
+                "Standard_DS14",
+                "Standard_DS2_v2",
+                "Standard_DS3_v2",
+                "Standard_DS4_v2",
+                "Standard_DS5_v2",
+                "Standard_DS11_v2",
+                "Standard_DS12_v2",
+                "Standard_DS13_v2",
+                "Standard_DS14_v2",
+                "Standard_D11",
+                "Standard_D12",
+                "Standard_D13",
+                "Standard_D14",
+                "Standard_G1",
+                "Standard_G2",
+                "Standard_G3",
+                "Standard_G4",
+                "Standard_G5",
+                "Standard_GS1",
+                "Standard_GS2",
+                "Standard_GS3",
+                "Standard_GS4",
+                "Standard_GS5",
+                "Standard_A2",
+                "Standard_A3",
+                "Standard_A4",
+                "Standard_A5",
+                "Standard_A6",
+                "Standard_A7",
+                "Standard_A8",
+                "Standard_A9",
+                "Standard_A10",
+                "Standard_A11",
+                "Standard_A1",
+                "Standard_D1",
+                "Standard_D1_v2",
+                "Standard_DS1",
+                "Standard_DS1_v2"
+            ]
+        },
+        "diskSizeGB": {
+            "type": "int",
+            "minValue": 128,
+            "maxValue": 1023,
+            "metadata": {
+                "description": "Disk size in GB."
+            }
+         },
+        "diskCaching": {
+            "type": "string",
+            "allowedValues": [
+                "None",
+                "ReadOnly",
+                "ReadWrite"
+            ],
+            "defaultValue": "None",
+            "metadata": {
+                "description": "Caching options."
+            }
+        }
+    },
+
+    "variables": {
+        "apiversion": "2015-06-15",
+        "storageAccountName": "[concat(parameters('spectrumScaleClusterName'), uniquestring(resourceGroup().id))]",
+        "virtualNetworkName": "[concat(parameters('spectrumScaleClusterName'), 'VNET')]",
+        "addressPrefix": "10.0.0.0/16",
+        "subnet1Name": "Subnet-1",
+        "subnet1Prefix": "10.0.0.0/24",
+        "subnet1Ref": "[resourceId('Microsoft.Network/virtualNetworks/subnets',variables('virtualNetworkName'),variables('subnet1Name'))]",
+        "availabilitySetName": "[concat(parameters('spectrumScaleClusterName'), 'AvSet')]",
+
+        "deployScaleTemplateurl": "https://raw.githubusercontent.com/sasikanth-eda/approach-2/master/scale_deploy_template.json",
+        "masterNode": "[concat(parameters('spectrumScaleNodeNamePrefix'), 0)]"
+    },
+
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('storageAccountName')]",
+            "apiVersion": "2016-01-01",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "Storage",
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "[variables('availabilitySetName')]",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[variables('virtualNetworkName')]",
+            "apiVersion": "2016-03-30",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('addressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('subnet1Name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnet1Prefix')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[concat(parameters('spectrumScaleNodeNamePrefix'), 'nic', copyindex())]",
+            "apiVersion": "2016-03-30",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "nicLoop",
+                "count": "[parameters('numberOfSpectrumScaleNodes')]"
+            },
+            "dependsOn": [
+                "[variables('virtualNetworkName')]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('subnet1Ref')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[concat(parameters('spectrumScaleNodeNamePrefix'), copyIndex())]",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "virtualMachineLoop",
+                "count": "[parameters('numberOfSpectrumScaleNodes')]"
+            },
+            "dependsOn": [
+                "nicLoop",
+                "[variables('storageAccountName')]"
+            ],
+            "properties": {
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('spectrumScaleVmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[concat(parameters('spectrumScaleNodeNamePrefix'), copyIndex())]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "osDisk": {
+                        "name": "[concat(parameters('spectrumScaleNodeNamePrefix'), copyIndex(), '-osdisk')]",
+                        "osType": "Linux",
+                        "caching": "[parameters('diskCaching')]",
+                        "createOption": "FromImage",
+                        "image":{
+                            "uri": "[parameters('osDiskVhdUri')]"
+                        },
+                        "vhd": {
+                            "uri": "[concat(reference(resourceId(parameters('ImageStorageAccountResourceGroupName'), 'Microsoft.Storage/storageAccounts/', parameters('ImageStorageAccountName')), variables('apiVersion')).primaryEndpoints.blob, 'vhds/', parameters('spectrumScaleNodeNamePrefix'), copyIndex(), uniquestring(resourceGroup().id), 'osDisk.vhd')]"
+                        }
+                    },
+                    "dataDisks": [
+                        {
+                            "name": "datadisk",
+                            "vhd": {
+                                "uri": "[concat(reference(variables('StorageAccountName'), '2016-01-01').primaryEndpoints.blob, 'vhds/datadisk', copyIndex(), '.vhd')]"
+                            },
+                            "caching": "None",
+                            "createOption": "Empty",
+                            "diskSizeGB": "[parameters('diskSizeGB')]",
+                            "lun": 0
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('spectrumScaleNodeNamePrefix'), 'nic', copyindex()))]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "2016-03-30",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('spectrumScaleNodeNamePrefix'), copyIndex(), '/init', copyIndex())]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('spectrumScaleNodeNamePrefix'), copyIndex())]"
+            ],
+            "copy": {
+                "name": "clientExtensionsCopy",
+                "count": "[parameters('numberOfSpectrumScaleNodes')]"
+            },
+            "properties": {
+                "publisher": "Microsoft.Azure.Extensions",
+                "type": "CustomScript",
+                "typeHandlerVersion": "2.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [
+                        "https://raw.githubusercontent.com/sasikanth-eda/approach-2/master/config_nodes.sh"
+                        ]
+                },
+                "protectedSettings": {
+                    "commandToExecute": "[concat('bash config_nodes.sh ', parameters('adminPassword'))]"
+                }
+            }
+        },
+        {
+            "name": "deployscale",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('masterNode'),'/extensions/init0')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('deployScaleTemplateurl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "masterNode": {
+                        "value": "[variables('masterNode')]"
+                    },
+                    "adminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "spectrumScaleNodeNamePrefix": {
+                        "value": "[parameters('spectrumScaleNodeNamePrefix')]"
+                    },
+                    "numberOfSpectrumScaleNodes": {
+                        "value": "[parameters('numberOfSpectrumScaleNodes')]"
+                    },
+                    "numberOfSpectrumScaleNsdNodes": {
+                        "value": "[parameters('numberOfSpectrumScaleNodes')]"
+                    },
+                    "spectrumScaleFilesystemName": {
+                        "value": "[parameters('spectrumScaleFilesystemName')]"
+                    },
+                    "spectrumScaleClusterName": {
+                        "value": "[parameters('spectrumScaleClusterName')]"
+                    }
+                }
+            }
+        }
+    ]
+}

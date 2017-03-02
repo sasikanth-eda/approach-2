@@ -1,0 +1,49 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "masterNode": {
+            "type": "string"
+        },
+        "adminPassword": {
+            "type": "string"
+        },
+        "spectrumScaleNodeNamePrefix": {
+            "type": "string"
+        },
+        "numberOfSpectrumScaleNodes": {
+            "type": "int"
+        },
+        "numberOfSpectrumScaleNsdNodes": {
+            "type": "int"
+        },
+        "spectrumScaleFilesystemName": {
+            "type": "string"
+        },
+        "spectrumScaleClusterName": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+        "type": "Microsoft.Compute/virtualMachines/extensions",
+        "name": "[concat(parameters('masterNode'), '/init0')]",
+        "apiVersion": "2016-03-30",
+        "location": "[resourceGroup().location]",
+        "properties": {
+            "publisher": "Microsoft.Azure.Extensions",
+            "type": "CustomScript",
+            "typeHandlerVersion": "2.0",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+                "fileUris": [
+                    "https://raw.githubusercontent.com/sasikanth-eda/approach-2/master/config_scale_cluster.sh"
+                ]
+            },
+            "protectedSettings": {
+                "commandToExecute": "[concat('bash config_scale_cluster.sh ', parameters('adminPassword'), ' ', parameters('spectrumScaleNodeNamePrefix'), ' ', parameters('numberOfSpectrumScaleNodes'), ' ', parameters('numberOfSpectrumScaleNsdNodes'), ' ', parameters('spectrumScaleFilesystemName'), ' ', parameters('spectrumScaleClusterName'))]"
+            }
+        }
+    }
+  ]
+}
