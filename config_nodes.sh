@@ -2,6 +2,8 @@
 
 USER_PASSWORD="$1"
 
+yum install -y sshpass
+
 mkdir -p /root/.ssh
 ssh-keygen -f /root/.ssh/id_rsa -t rsa -N '' -q -P ""
 
