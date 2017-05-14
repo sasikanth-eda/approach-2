@@ -75,7 +75,7 @@ done
 /usr/lpp/mmfs/bin/mmcrnsd -F /root/nsd.txt
 
 /usr/lpp/mmfs/bin/mmstartup -a
-sleep 60
+sleep 240
 
 # Create FILESYSTEM
 /usr/lpp/mmfs/bin/mmcrfs /gpfs0 $FILESYSTEM_NAME -F /root/nsd.txt -A yes -B 512k;
